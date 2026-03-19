@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DiscDraft — Ultimate Frisbee Team Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --grass: #152a10; --turf: #0c1e09; --lime: #c8f135; --lime-dim: #9cbd24;
+  --lime-bg: rgba(200,241,53,0.08); --white: #f0f4e8; --muted: #6e8060;
+  --card: #182813; --card2: #1e3218; --border: #2a4020;
+  --danger: #f03a30; --sky: #38c0f0; --orange: #f0902a; --purple: #a855f7;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--turf);color:var(--white);font-family:'DM Sans',sans-serif;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 79px,rgba(255,255,255,.025) 79px,rgba(255,255,255,.025) 80px),repeating-linear-gradient(90deg,transparent,transparent 79px,rgba(255,255,255,.025) 79px,rgba(255,255,255,.025) 80px);pointer-events:none;z-index:0}
+body>*{position:relative;z-index:1}
+
+header{background:rgba(21,42,16,.96);backdrop-filter:blur(10px);border-bottom:2px solid var(--lime);padding:0 36px;display:flex;align-items:center;justify-content:space-between;height:62px;position:sticky;top:0;z-index:200}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:4px;color:var(--lime);display:flex;align-items:center;gap:10px;user-select:none}
+.logo em{color:var(--white);font-style:normal}
+.disc{width:32px;height:32px;border:3px solid var(--lime);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;animation:spin 10s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+nav{display:flex;gap:4px}
+nav button{background:transparent;border:1.5px solid transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.75rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:7px 16px;border-radius:5px;cursor:pointer;transition:all .2s}
+nav button:hover{color:var(--white);border-color:var(--border)}
+nav button.active{background:var(--lime);color:var(--grass);border-color:var(--lime)}
+
+.db-pill{display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:.7rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--border);color:var(--muted);background:var(--card);transition:all .3s;white-space:nowrap}
+.db-pill.connected{border-color:var(--lime);color:var(--lime)}
+.db-pill.error{border-color:var(--danger);color:var(--danger)}
+.db-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.db-pill.connected .db-dot{animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+.page{display:none;padding:36px 40px;max-width:920px;margin:0 auto}
+.page.active{display:block;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+h2{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;letter-spacing:4px;color:var(--lime);line-height:1;margin-bottom:4px}
+.subtitle{color:var(--muted);font-size:.88rem;margin-bottom:28px}
+
+.card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:26px;margin-bottom:20px}
+.card-title{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:2px;color:var(--lime);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+
+label{display:block;font-size:.72rem;font-weight:600;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+input,select{width:100%;background:var(--turf);border:1.5px solid var(--border);color:var(--white);font-family:'DM Sans',sans-serif;font-size:.92rem;padding:10px 13px;border-radius:7px;outline:none;margin-bottom:16px;transition:border-color .2s}
+input:focus,select:focus{border-color:var(--lime)}
+select option{background:var(--grass)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+.talent-row{display:flex;gap:6px;margin-bottom:18px}
+.talent-btn{flex:1;padding:9px 4px;background:var(--turf);border:1.5px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border-radius:7px;cursor:pointer;text-align:center;transition:all .18s}
+.talent-btn:hover{border-color:var(--lime);color:var(--white)}
+.talent-btn.sel{background:var(--lime);color:var(--grass);border-color:var(--lime)}
+
+.btn{background:var(--lime);color:var(--grass);border:none;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;padding:11px 26px;border-radius:7px;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{background:var(--lime-dim);transform:translateY(-1px);box-shadow:0 4px 20px rgba(200,241,53,.2)}
+.btn:active{transform:none;box-shadow:none}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-ghost{background:transparent;border:1.5px solid var(--lime);color:var(--lime)}
+.btn-ghost:hover{background:var(--lime-bg);box-shadow:none}
+.btn-sky{background:var(--sky);color:var(--turf)}
+.btn-sky:hover{opacity:.85;box-shadow:none;transform:none}
+.btn-red{background:var(--danger);color:#fff;font-size:.72rem;padding:5px 10px;letter-spacing:1px}
+.btn-red:hover{background:#c42e25;box-shadow:none;transform:none}
+.btn-sm{font-size:.78rem;padding:7px 14px;letter-spacing:1.5px}
+
+.alert{padding:11px 15px;border-radius:7px;font-size:.84rem;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+.alert-ok{background:rgba(200,241,53,.1);border:1px solid var(--lime);color:var(--lime)}
+.alert-err{background:rgba(240,58,48,.1);border:1px solid var(--danger);color:var(--danger)}
+.alert-info{background:rgba(56,192,240,.1);border:1px solid var(--sky);color:var(--sky)}
+.alert-warn{background:rgba(240,144,42,.1);border:1px solid var(--orange);color:var(--orange)}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.badge-open{background:rgba(200,241,53,.12);color:var(--lime);border:1px solid var(--lime)}
+.badge-closed{background:rgba(240,58,48,.12);color:var(--danger);border:1px solid var(--danger)}
+.badge-soon{background:rgba(56,192,240,.12);color:var(--sky);border:1px solid var(--sky)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:blink 1.6s ease-in-out infinite}
+
+.reg-bar{display:flex;align-items:center;gap:14px;background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:22px}
+.reg-bar .icon{font-size:1.6rem;flex-shrink:0}
+.reg-bar-info{flex:1}
+.reg-bar-info .name{font-weight:600;font-size:.95rem;margin-bottom:2px}
+.reg-bar-info .dates{font-size:.78rem;color:var(--muted)}
+
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
+.stat-box{background:var(--card);border:1.5px solid var(--border);border-radius:9px;padding:16px;text-align:center}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:var(--lime);line-height:1}
+.stat-lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-top:3px}
+
+.player-list{display:flex;flex-direction:column;gap:7px}
+.player-row{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;animation:slideIn .2s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.p-left{display:flex;align-items:center;gap:12px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--lime);color:var(--grass);font-family:'Bebas Neue',sans-serif;font-size:.95rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.p-name{font-weight:600;font-size:.92rem}
+.p-meta{font-size:.73rem;color:var(--muted)}
+.pips{display:flex;gap:3px;align-items:center}
+.pip{width:7px;height:7px;border-radius:2px;background:var(--border)}
+.pip.on{background:var(--lime)}
+
+.teams-grid{display:grid;gap:18px}
+.team-card{background:var(--card);border-radius:12px;border:2px solid var(--border);overflow:hidden;transition:border-color .2s}
+.team-card:hover{border-color:var(--lime-dim)}
+.team-header{padding:13px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.team-name-label{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:3px}
+.team-meta{display:flex;gap:14px;font-size:.73rem;color:var(--muted)}
+.team-body{padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+.tp-row{padding:8px 11px;background:var(--card2);border-radius:6px;display:flex;align-items:center;justify-content:space-between;font-size:.85rem}
+
+.round-history{display:flex;flex-direction:column;gap:14px;margin-top:28px}
+.round-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.round-item{background:var(--card);border:1.5px solid var(--border);border-radius:10px;overflow:hidden}
+.round-title-bar{padding:10px 16px;background:var(--card2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .15s}
+.round-title-bar:hover{background:rgba(200,241,53,.05)}
+.round-title-label{font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;color:var(--lime)}
+.round-time{font-size:.72rem;color:var(--muted)}
+.round-body{display:none;padding:12px}
+.round-body.open{display:block}
+.round-mini-teams{display:grid;gap:8px}
+.rmt{background:var(--card2);border-radius:7px;padding:9px 12px}
+.rmt-name{font-family:'Bebas Neue',sans-serif;letter-spacing:1.5px;font-size:.95rem;margin-bottom:5px}
+.rmt-players{font-size:.8rem;color:var(--muted);line-height:1.6}
+.chevron{transition:transform .2s;font-style:normal}
+.chevron.open{transform:rotate(180deg)}
+
+.teams-ctrl{display:flex;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--border);border-radius:9px;padding:8px 16px}
+.teams-ctrl span{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)}
+.tc-btn{width:28px;height:28px;background:var(--card2);border:1px solid var(--border);color:var(--white);border-radius:5px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1}
+.tc-btn:hover{background:var(--lime);color:var(--grass);border-color:var(--lime)}
+.tc-num{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;color:var(--lime);width:26px;text-align:center}
+.split-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:24px}
+
+.round-banner{display:flex;align-items:center;justify-content:space-between;background:var(--lime-bg);border:1.5px solid var(--lime);border-radius:9px;padding:10px 16px;margin-bottom:18px}
+.rb-label{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;color:var(--lime)}
+.rb-info{font-size:.78rem;color:var(--muted);margin-top:1px}
+.rb-actions{display:flex;gap:8px}
+
+.empty{text-align:center;padding:52px 20px;color:var(--muted);font-size:.88rem}
+.empty .big{font-size:3rem;margin-bottom:12px;opacity:.4}
+hr{border:none;border-top:1px solid var(--border);margin:18px 0}
+
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--lime);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+
+/* Setup / Deploy */
+.setup-warning{background:rgba(240,144,42,.1);border:1.5px solid var(--orange);border-radius:10px;padding:18px 20px;margin-bottom:20px}
+.setup-warning .sw-title{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;color:var(--orange);margin-bottom:6px}
+.setup-warning p{font-size:.84rem;color:var(--white);line-height:1.6}
+.steps{display:flex;flex-direction:column;gap:0;margin-bottom:20px}
+.step{display:flex;gap:16px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--border)}
+.step:last-child{border-bottom:none}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--lime);color:var(--grass);font-family:'Bebas Neue',sans-serif;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-body{flex:1}
+.step-title{font-weight:600;font-size:.9rem;margin-bottom:5px}
+.step-desc{font-size:.8rem;color:var(--muted);line-height:1.65}
+.step-desc a{color:var(--sky);text-decoration:none}
+.step-desc a:hover{text-decoration:underline}
+code{display:inline-block;background:var(--turf);border:1px solid var(--border);color:var(--lime);font-family:monospace;font-size:.8rem;padding:2px 8px;border-radius:4px;margin:1px 2px;word-break:break-all}
+pre{background:var(--turf);border:1px solid var(--border);border-radius:7px;padding:12px 14px;font-family:monospace;font-size:.78rem;color:var(--lime);white-space:pre-wrap;word-break:break-all;margin:8px 0;line-height:1.6;overflow-x:auto}
+
+.share-box{display:flex;gap:8px;align-items:center;margin-top:6px}
+.share-box input{flex:1;margin-bottom:0;font-family:monospace;font-size:.82rem;color:var(--sky);border-color:var(--sky)}
+.share-preview{background:var(--turf);border:1.5px solid var(--lime);border-radius:9px;padding:14px 18px;margin-top:14px;display:none}
+.share-preview .sp-label{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px}
+.share-preview .sp-msg{font-size:.9rem;line-height:1.6;color:var(--white);white-space:pre-wrap;word-break:break-all}
+
+@media(max-width:620px){
+  header{padding:0 12px}
+  .page{padding:20px 16px}
+  .form-row{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .talent-row{flex-wrap:wrap}
+  .talent-btn{flex:1 1 30%}
+  nav button{padding:6px 9px;font-size:.65rem}
+  .logo{font-size:1.5rem}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="disc">🥏</div>Disc<em>Draft</em></div>
+  <nav>
+    <button class="active" onclick="nav('register')">Register</button>
+    <button onclick="nav('players')">Players</button>
+    <button onclick="nav('teams')">Teams</button>
+    <button onclick="nav('admin')">⚙ Admin</button>
+  </nav>
+  <div class="db-pill" id="db-pill"><div class="db-dot"></div><span id="db-label">No DB</span></div>
+</header>
+
+<!-- ══════════ REGISTER ══════════ -->
+<div class="page active" id="page-register">
+  <h2>Join the Game</h2>
+  <p class="subtitle">Sign up before the event to be drafted into a balanced team.</p>
+  <div class="reg-bar">
+    <div class="icon">📅</div>
+    <div class="reg-bar-info">
+      <div class="name" id="rb-name">Loading…</div>
+      <div class="dates" id="rb-dates"></div>
+    </div>
+    <div id="rb-badge"></div>
+  </div>
+  <div id="reg-msg"></div>
+  <div class="card" id="reg-form-wrap">
+    <div class="card-title">📋 Player Info</div>
+    <div class="form-row">
+      <div><label>First Name</label><input id="r-first" placeholder="Alex"></div>
+      <div><label>Last Name</label><input id="r-last" placeholder="Rivera"></div>
+    </div>
+    <div class="form-row">
+      <div><label>Age</label><input id="r-age" type="number" placeholder="28" min="8" max="99"></div>
+      <div><label>Email (optional)</label><input id="r-email" type="email" placeholder="alex@example.com"></div>
+    </div>
+    <label>Self-Rated Talent Level</label>
+    <div class="talent-row">
+      <button class="talent-btn" data-v="1" onclick="pickTalent(1)">1 — Newbie</button>
+      <button class="talent-btn" data-v="2" onclick="pickTalent(2)">2 — Casual</button>
+      <button class="talent-btn" data-v="3" onclick="pickTalent(3)">3 — Solid</button>
+      <button class="talent-btn" data-v="4" onclick="pickTalent(4)">4 — Skilled</button>
+      <button class="talent-btn" data-v="5" onclick="pickTalent(5)">5 — Elite</button>
+    </div>
+    <button class="btn" id="reg-btn" onclick="doRegister()">🥏 Register for Event</button>
+  </div>
+</div>
+
+<!-- ══════════ PLAYERS ══════════ -->
+<div class="page" id="page-players">
+  <h2>Roster</h2>
+  <p class="subtitle" id="roster-sub">Registered players for the current event.</p>
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-val" id="s-total">0</div><div class="stat-lbl">Players</div></div>
+    <div class="stat-box"><div class="stat-val" id="s-age">—</div><div class="stat-lbl">Avg Age</div></div>
+    <div class="stat-box"><div class="stat-val" id="s-talent">—</div><div class="stat-lbl">Avg Talent</div></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:0">👥 Registered Players</div>
+      <button class="btn btn-ghost btn-sm" onclick="loadPlayers(true)">↻ Refresh</button>
+    </div>
+    <div id="players-loading" style="text-align:center;padding:24px;display:none"><div class="spinner"></div></div>
+    <div class="player-list" id="roster-list"></div>
+  </div>
+</div>
+
+<!-- ══════════ TEAMS ══════════ -->
+<div class="page" id="page-teams">
+  <h2>Team Draft</h2>
+  <p class="subtitle">Generate balanced teams for each game. Save each round to build a history.</p>
+  <div id="teams-msg"></div>
+  <div class="split-toolbar">
+    <div class="teams-ctrl">
+      <span>Teams</span>
+      <button class="tc-btn" onclick="adjTeams(-1)">−</button>
+      <div class="tc-num" id="tc-num">2</div>
+      <button class="tc-btn" onclick="adjTeams(1)">+</button>
+    </div>
+    <button class="btn" onclick="generateTeams()">⚡ Generate Teams</button>
+    <button class="btn btn-ghost btn-sm" id="btn-reshuffle" style="display:none" onclick="reshuffleTeams()">🔀 Reshuffle</button>
+    <button class="btn btn-ghost btn-sm" id="btn-save-round" style="display:none" onclick="saveRound()">💾 Save Round</button>
+  </div>
+  <div id="current-teams-area"></div>
+  <div id="history-section" style="display:none">
+    <div class="round-header-row">
+      <div class="card-title" style="margin-bottom:0">📚 Round History</div>
+      <button class="btn btn-red btn-sm" onclick="clearHistory()">Clear History</button>
+    </div>
+    <div class="round-history" id="round-history-list"></div>
+  </div>
+</div>
+
+<!-- ══════════ ADMIN ══════════ -->
+<div class="page" id="page-admin">
+  <h2>Admin Panel</h2>
+  <p class="subtitle">Connect your database, configure the event, and manage players.</p>
+
+  <!-- 1. Supabase -->
+  <div class="card">
+    <div class="card-title">🗄️ Supabase Database Setup</div>
+    <div id="sb-ok-banner" style="display:none" class="alert alert-ok">✅ Connected to Supabase! Registrations are stored in the cloud and visible from any device.</div>
+
+    <div id="sb-setup-steps">
+      <div class="setup-warning">
+        <div class="sw-title">⚠ Database Not Yet Connected</div>
+        <p>Registrations are currently only stored locally on this device. Follow these 4 steps (≈5 minutes) to enable cloud storage so anyone can register from any device.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Create a free Supabase account</div>
+            <div class="step-desc">Go to <a href="https://supabase.com" target="_blank">supabase.com</a> → <strong>Start your project</strong>. Sign up with GitHub or email — it's free forever on the hobby tier.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Create a new project</div>
+            <div class="step-desc">Click <strong>New Project</strong>. Name it <code>discdraft</code>. Set a database password and choose the region nearest to you. Click <strong>Create new project</strong> and wait about 60 seconds.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Run this SQL to create the players table</div>
+            <div class="step-desc">
+              In your project click <strong>SQL Editor</strong> in the left sidebar. Paste the SQL below and click <strong>Run</strong>:
+              <pre>create table players (
+  id bigint generated always as identity primary key,
+  first text not null,
+  last text not null,
+  age integer not null,
+  email text,
+  talent integer not null,
+  event_id text not null,
+  registered_at timestamptz default now()
+);
+
+alter table players enable row level security;
+
+create policy "Public read" on players
+  for select using (true);
+
+create policy "Public insert" on players
+  for insert with check (true);
+
+create policy "Public delete" on players
+  for delete using (true);</pre>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Copy your API credentials</div>
+            <div class="step-desc">Go to <strong>Project Settings</strong> (gear icon, bottom-left) → <strong>API</strong>. Copy your <strong>Project URL</strong> and the <strong>anon / public</strong> key. Paste them in the fields below, then click <strong>Test Connection</strong>.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <label>Supabase Project URL</label>
+    <input id="a-sb-url" placeholder="https://xxxxxxxxxxxx.supabase.co" oninput="saveCreds()">
+    <label>Supabase Anon / Public Key</label>
+    <input id="a-sb-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…" oninput="saveCreds()">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-sky btn-sm" onclick="testConnection()">🔌 Test Connection</button>
+      <span id="conn-msg" style="font-size:.82rem"></span>
+    </div>
+  </div>
+
+  <!-- 2. Event Settings -->
+  <div class="card">
+    <div class="card-title">⚙️ Event Settings</div>
+    <div class="alert alert-info" style="margin-bottom:18px">
+      📥 After filling in your settings, click <strong>Save &amp; Download index.html</strong>. Upload that file to GitHub Pages — it will have your database credentials and event details baked in, so every visitor connects automatically with no login required.
+    </div>
+    <div><label>Event Name</label><input id="a-name" placeholder="Spring Pickup — April 12"></div>
+    <div class="form-row">
+      <div><label>Registration Opens</label><input type="datetime-local" id="a-open"></div>
+      <div><label>Registration Closes</label><input type="datetime-local" id="a-close"></div>
+    </div>
+    <div>
+      <label>Event Date — registrations auto-clear the day after this date</label>
+      <input type="date" id="a-event-date">
+    </div>
+    <button class="btn" onclick="saveAdmin()">💾 Save &amp; Download index.html</button>
+    <div id="admin-msg" style="margin-top:14px"></div>
+  </div>
+
+  <!-- 3. Roster -->
+  <div class="card">
+    <div class="card-title">🗑️ Manage Roster</div>
+    <p style="font-size:.84rem;color:var(--muted);margin-bottom:14px">Remove individual players or wipe the entire roster from the database.</p>
+    <div class="player-list" id="admin-roster"></div>
+    <hr>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+      <button class="btn btn-red" onclick="clearRoster()">🗑 Clear All Players</button>
+      <button class="btn btn-red" onclick="clearRoundsAdmin()">🗑 Clear All Rounds</button>
+    </div>
+  </div>
+
+  <!-- 4. Deploy & Share -->
+  <div class="card">
+    <div class="card-title">🔗 Deploy &amp; Share</div>
+    <div class="alert alert-info" style="margin-bottom:18px">
+      💡 To give players a shareable link, host this file for free on <strong>GitHub Pages</strong>. Follow the steps below.
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Create a free GitHub account</div>
+          <div class="step-desc">Go to <a href="https://github.com" target="_blank">github.com</a> and sign up. Confirm your email address.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Create a new public repository</div>
+          <div class="step-desc">Click <strong>+</strong> → <strong>New repository</strong>. Name it <code>discdraft</code>. Set to <strong>Public</strong>. Check <strong>Add a README</strong>. Click <strong>Create repository</strong>.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Upload this file renamed as index.html</div>
+          <div class="step-desc">Click <strong>Add file → Upload files</strong>. Upload <code>discdraft.html</code> renamed to <code>index.html</code>. Click <strong>Commit changes</strong>.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Enable GitHub Pages</div>
+          <div class="step-desc">Go to <strong>Settings → Pages</strong>. Source: <strong>Deploy from branch</strong>. Branch: <code>main</code>, folder: <code>/ (root)</code>. Click <strong>Save</strong>. Your URL appears after ~60 seconds.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Paste your URL below to generate a group chat message</div>
+          <div class="step-desc">Your URL will look like: <code>https://yourname.github.io/discdraft/</code></div>
+        </div>
+      </div>
+    </div>
+    <label>Your Live GitHub Pages URL</label>
+    <div class="share-box">
+      <input type="url" id="a-live-url" placeholder="https://yourname.github.io/discdraft/" oninput="updateSharePreview()">
+      <button class="btn btn-sky btn-sm" onclick="copyShareMsg()">📋 Copy Message</button>
+    </div>
+    <div class="share-preview" id="share-preview">
+      <div class="sp-label">📱 Ready-to-paste group chat message</div>
+      <div class="sp-msg" id="share-msg-text"></div>
+    </div>
+    <div id="share-copy-msg" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   HARDCODED CREDENTIALS — set by admin, baked
+   into the file so ALL visitors connect automatically.
+   Admin updates these via the Admin panel, then
+   downloads and re-uploads the file to GitHub.
+   ══════════════════════════════════════════════ */
+const BAKED = {
+  sbUrl:      '%%SB_URL%%',
+  sbKey:      '%%SB_KEY%%',
+  eventId:    '%%EVENT_ID%%',
+  eventName:  '%%EVENT_NAME%%',
+  regOpen:    '%%REG_OPEN%%',
+  regClose:   '%%REG_CLOSE%%',
+  eventDate:  '%%EVENT_DATE%%',
+};
+
+// Returns true if a placeholder hasn't been filled in yet
+const isPlaceholder = v => !v || v.startsWith('%%');
+
+/* ══════════════════════════════════════════════
+   STATE  —  organiser prefs in localStorage
+             (rounds, numTeams, liveUrl, etc.)
+             Credentials come from BAKED above.
+   ══════════════════════════════════════════════ */
+const LS = 'discdraft4';
+const DEFS = {
+  numTeams:2, rounds:[], liveUrl:'',
+  // Admin-editable fields (used to regenerate the file)
+  sbUrl:'', sbKey:'', eventId:'evt_'+Math.random().toString(36).slice(2,9),
+  eventName:'Ultimate Frisbee Pickup Game',
+  regOpen: new Date(Date.now()-2*864e5).toISOString(),
+  regClose:new Date(Date.now()+5*864e5).toISOString(),
+  eventDate:'',
+};
+let S = (()=>{ try{ return {...DEFS,...JSON.parse(localStorage.getItem(LS))};} catch{ return{...DEFS};}})();
+const save = () => localStorage.setItem(LS, JSON.stringify(S));
+
+// Effective credentials: use baked values if set, otherwise fall back to admin's localStorage copy
+const effUrl = () => isPlaceholder(BAKED.sbUrl)  ? S.sbUrl  : BAKED.sbUrl;
+const effKey = () => isPlaceholder(BAKED.sbKey)  ? S.sbKey  : BAKED.sbKey;
+const effId  = () => isPlaceholder(BAKED.eventId)? S.eventId: BAKED.eventId;
+// Effective event settings: prefer baked values so all visitors see the same event
+const effName  = () => isPlaceholder(BAKED.eventName) ? S.eventName  : BAKED.eventName;
+const effOpen  = () => isPlaceholder(BAKED.regOpen)   ? S.regOpen    : BAKED.regOpen;
+const effClose = () => isPlaceholder(BAKED.regClose)  ? S.regClose   : BAKED.regClose;
+const effDate  = () => isPlaceholder(BAKED.eventDate) ? S.eventDate  : BAKED.eventDate;
+
+let players = [];
+let talent  = null;
+let currentTeams = null;
+let dbOk = false;
+
+/* ══ SUPABASE ══ */
+const sbH = () => ({'apikey':effKey(),'Authorization':'Bearer '+effKey(),'Content-Type':'application/json','Prefer':'return=representation'});
+
+async function sbGet(path){
+  const r = await fetch(effUrl()+'/rest/v1/'+path,{headers:sbH()});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbPost(path,body){
+  const r = await fetch(effUrl()+'/rest/v1/'+path,{method:'POST',headers:sbH(),body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbDel(path){
+  const r = await fetch(effUrl()+'/rest/v1/'+path,{method:'DELETE',headers:sbH()});
+  if(!r.ok) throw new Error(await r.text());
+}
+
+/* ══ DB PILL ══ */
+function setDbPill(state){
+  const pill=document.getElementById('db-pill'), lbl=document.getElementById('db-label');
+  pill.className='db-pill '+(state||'');
+  lbl.textContent = state==='connected'?'DB Connected':state==='error'?'DB Error':'No DB';
+  dbOk = state==='connected';
+}
+
+/* ══ AUTO-CLEAR CHECK ══ */
+async function maybeAutoClear(){
+  const ed = effDate();
+  if(!ed) return;
+  const clearDate = new Date(ed);
+  clearDate.setDate(clearDate.getDate()+1);
+  if(new Date() >= clearDate){
+    try{
+      await sbDel(`players?event_id=eq.${encodeURIComponent(effId())}`);
+    } catch(e){ console.warn('Auto-clear failed:',e); }
+  }
+}
+
+/* ══ LOAD PLAYERS ══ */
+async function loadPlayers(showSpinner){
+  if(!effUrl()||!effKey()){ setDbPill(''); return; }
+  if(showSpinner){
+    const sp=document.getElementById('players-loading');
+    if(sp) sp.style.display='block';
+  }
+  try{
+    await maybeAutoClear();
+    const data = await sbGet(`players?event_id=eq.${encodeURIComponent(effId())}&order=registered_at.asc`);
+    players = data;
+    setDbPill('connected');
+  } catch(e){
+    setDbPill('error');
+    console.error(e);
+  } finally{
+    const sp=document.getElementById('players-loading');
+    if(sp) sp.style.display='none';
+  }
+  renderPlayersList();
+  updateStats();
+}
+
+/* ══ NAV ══ */
+function nav(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  [...document.querySelectorAll('nav button')].find(b=>b.textContent.toLowerCase().includes(p))?.classList.add('active');
+  if(p==='register') renderRegPage();
+  if(p==='players') { loadPlayers(true); renderPlayersPage(); }
+  if(p==='teams')   renderTeamsPage();
+  if(p==='admin')   renderAdminPage();
+}
+
+/* ══ HELPERS ══ */
+const fmt = d => new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+const avg = (arr,fn) => arr.length?(arr.reduce((a,x)=>a+fn(x),0)/arr.length).toFixed(1):'—';
+const initials = p => ((p.first||'?')[0]+(p.last||'?')[0]).toUpperCase();
+const TLABELS = ['','Newbie','Casual','Solid','Skilled','Elite'];
+const TCOLORS = ['var(--lime)','var(--sky)','var(--orange)','var(--purple)','#f05090','#40e0a0','#f0c030','#e07030'];
+const TNAMES  = ['Hawkeyes','Falcons','Storm','Blaze','Surge','Phantom','Bolt','Viper'];
+
+function regStatus(){
+  const now=Date.now(),open=new Date(effOpen()).getTime(),close=new Date(effClose()).getTime();
+  if(now<open) return 'soon';
+  if(now>close) return 'closed';
+  return 'open';
+}
+function msg(id,text,type='ok'){
+  const el=document.getElementById(id); if(!el) return;
+  el.innerHTML=text?`<div class="alert alert-${type}">${text}</div>`:'';
+}
+const pips = n => [1,2,3,4,5].map(i=>`<div class="pip ${i<=n?'on':''}"></div>`).join('');
+
+/* ══ REGISTER PAGE ══ */
+function renderRegPage(){
+  const st=regStatus(), wrap=document.getElementById('reg-form-wrap');
+  document.getElementById('rb-name').textContent  = effName();
+  document.getElementById('rb-dates').textContent = `${fmt(effOpen())}  →  ${fmt(effClose())}`;
+  document.getElementById('rb-badge').innerHTML = {
+    open:  `<span class="badge badge-open"><span class="dot"></span>Open</span>`,
+    closed:`<span class="badge badge-closed">Closed</span>`,
+    soon:  `<span class="badge badge-soon">⏳ Upcoming</span>`
+  }[st];
+  msg('reg-msg','');
+  if(!effUrl()||!effKey()){
+    msg('reg-msg','⚠ The organizer is still setting up the database — registration will be available soon.','warn');
+    wrap.style.opacity='.4'; wrap.style.pointerEvents='none'; return;
+  }
+  if(st==='open'){ wrap.style.cssText=''; }
+  else{
+    wrap.style.opacity='.4'; wrap.style.pointerEvents='none';
+    msg('reg-msg', st==='soon'?'⏳ Registration is not yet open — check back soon!':'🔒 Registration is closed for this event.','info');
+  }
+}
+
+function pickTalent(v){
+  talent=v;
+  document.querySelectorAll('.talent-btn').forEach(b=>b.classList.toggle('sel',+b.dataset.v===v));
+}
+
+async function doRegister(){
+  const first=document.getElementById('r-first').value.trim();
+  const last =document.getElementById('r-last').value.trim();
+  const age  =parseInt(document.getElementById('r-age').value);
+  const email=document.getElementById('r-email').value.trim();
+  if(!first||!last)       return msg('reg-msg','⚠ Please enter your full name.','err');
+  if(!age||age<8||age>99) return msg('reg-msg','⚠ Please enter a valid age (8–99).','err');
+  if(!talent)             return msg('reg-msg','⚠ Please select your talent level.','err');
+  if(!effUrl()||!effKey()) return msg('reg-msg','⚠ Database not configured — please contact the organizer.','err');
+
+  const btn=document.getElementById('reg-btn');
+  btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Registering…';
+  try{
+    // Duplicate check
+    const exists=await sbGet(`players?event_id=eq.${encodeURIComponent(effId())}&first=ilike.${encodeURIComponent(first)}&last=ilike.${encodeURIComponent(last)}`);
+    if(exists.length>0){ msg('reg-msg','⚠ That name is already registered for this event.','err'); return; }
+    await sbPost('players',{first,last,age,email,talent,event_id:effId()});
+    ['r-first','r-last','r-age','r-email'].forEach(id=>document.getElementById(id).value='');
+    talent=null; document.querySelectorAll('.talent-btn').forEach(b=>b.classList.remove('sel'));
+    msg('reg-msg',`✅ You're in, ${first}! See you on the field. 🥏`,'ok');
+    await loadPlayers(false);
+  } catch(e){ msg('reg-msg','⚠ Registration failed: '+e.message,'err'); }
+  finally{ btn.disabled=false; btn.innerHTML='🥏 Register for Event'; }
+}
+
+/* ══ PLAYERS PAGE ══ */
+function renderPlayersPage(){
+  document.getElementById('roster-sub').textContent =
+    `${players.length} player${players.length!==1?'s':''} registered for ${effName()}.`;
+}
+function updateStats(){
+  document.getElementById('s-total').textContent  = players.length;
+  document.getElementById('s-age').textContent    = players.length?avg(players,p=>p.age):'—';
+  document.getElementById('s-talent').textContent = players.length?avg(players,p=>p.talent):'—';
+  renderPlayersPage();
+}
+function renderPlayersList(){
+  renderPList('roster-list',players,false);
+  renderPList('admin-roster',players,true);
+}
+function renderPList(id,list,showDel){
+  const el=document.getElementById(id); if(!el) return;
+  if(!list.length){ el.innerHTML=`<div class="empty"><div class="big">🥏</div>No players registered yet.</div>`; return; }
+  el.innerHTML=list.map(p=>`
+    <div class="player-row">
+      <div class="p-left">
+        <div class="avatar">${initials(p)}</div>
+        <div><div class="p-name">${p.first} ${p.last}</div><div class="p-meta">Age ${p.age} · ${TLABELS[p.talent]}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="pips">${pips(p.talent)}</div>
+        ${showDel?`<button class="btn btn-red btn-sm" onclick="removePlayer(${p.id})">✕</button>`:''}
+      </div>
+    </div>`).join('');
+}
+
+/* ══ TEAMS PAGE ══ */
+function renderTeamsPage(){
+  document.getElementById('tc-num').textContent=S.numTeams;
+  msg('teams-msg','');
+  if(currentTeams) renderCurrentTeams();
+  else document.getElementById('current-teams-area').innerHTML=`<div class="empty"><div class="big">⚡</div>Set the number of teams and click Generate.</div>`;
+  renderHistory();
+}
+function adjTeams(d){ S.numTeams=Math.max(2,Math.min(8,(S.numTeams||2)+d)); document.getElementById('tc-num').textContent=S.numTeams; save(); }
+
+function snakeDraft(list,n,jitter=false){
+  const scored=list.map(p=>{
+    const j=jitter?(Math.random()*.6-.3):0;
+    return {...p,_s:(p.talent+j)*10+(100-Math.min(p.age,80))*.2};
+  }).sort((a,b)=>b._s-a._s);
+  const teams=Array.from({length:n},(_,i)=>({id:i,name:TNAMES[i]||`Team ${i+1}`,color:TCOLORS[i],players:[]}));
+  scored.forEach((p,idx)=>{ const r=Math.floor(idx/n),pos=r%2===0?idx%n:n-1-(idx%n); teams[pos].players.push(p); });
+  return teams;
+}
+
+async function generateTeams(){
+  await loadPlayers(false);
+  if(players.length<S.numTeams){ msg('teams-msg',`⚠ Need at least ${S.numTeams} players. Currently ${players.length} registered.`,'err'); return; }
+  msg('teams-msg','');
+  currentTeams=snakeDraft([...players],S.numTeams,false);
+  renderCurrentTeams();
+  document.getElementById('btn-reshuffle').style.display='';
+  document.getElementById('btn-save-round').style.display='';
+}
+
+function reshuffleTeams(){
+  if(!players.length) return;
+  currentTeams=snakeDraft([...players],S.numTeams,true);
+  renderCurrentTeams();
+  document.getElementById('btn-save-round').style.display='';
+  msg('teams-msg','🔀 Teams reshuffled!','ok');
+  setTimeout(()=>msg('teams-msg',''),2500);
+}
+
+function renderCurrentTeams(){
+  const area=document.getElementById('current-teams-area'); if(!currentTeams) return;
+  const cols=currentTeams.length<=3?currentTeams.length:2;
+  area.innerHTML=`
+    <div class="round-banner">
+      <div>
+        <div class="rb-label">Current Draft</div>
+        <div class="rb-info">${currentTeams.length} teams · ${players.length} players · ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      <div class="rb-actions">
+        <button class="btn btn-ghost btn-sm" onclick="reshuffleTeams()">🔀 Reshuffle</button>
+        <button class="btn btn-sm" onclick="saveRound()">💾 Save Round</button>
+      </div>
+    </div>
+    <div class="teams-grid" style="grid-template-columns:repeat(${cols},1fr)">
+      ${currentTeams.map(t=>`
+        <div class="team-card">
+          <div class="team-header" style="border-left:4px solid ${t.color}">
+            <div class="team-name-label" style="color:${t.color}">${t.name}</div>
+            <div class="team-meta"><span>👤${t.players.length}</span><span>📅 Avg ${avg(t.players,p=>p.age)}</span><span>⭐ Avg ${avg(t.players,p=>p.talent)}</span></div>
+          </div>
+          <div class="team-body">
+            ${t.players.map(p=>`
+              <div class="tp-row">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div class="avatar" style="background:${t.color};width:28px;height:28px;font-size:.8rem">${initials(p)}</div>
+                  <div><div style="font-weight:600;font-size:.87rem">${p.first} ${p.last}</div><div style="font-size:.72rem;color:var(--muted)">Age ${p.age}</div></div>
+                </div>
+                <div class="pips">${pips(p.talent)}</div>
+              </div>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+/* ══ ROUND HISTORY ══ */
+function saveRound(){
+  if(!currentTeams) return;
+  const num=S.rounds.length+1;
+  S.rounds.push({id:Date.now(),num,label:`Game ${num}`,time:new Date().toISOString(),teams:JSON.parse(JSON.stringify(currentTeams))});
+  save(); renderHistory();
+  msg('teams-msg',`✅ Game ${num} saved to history!`,'ok');
+  setTimeout(()=>msg('teams-msg',''),2500);
+  document.getElementById('btn-save-round').style.display='none';
+}
+function renderHistory(){
+  const sec=document.getElementById('history-section'),list=document.getElementById('round-history-list');
+  if(!S.rounds.length){ sec.style.display='none'; return; }
+  sec.style.display='';
+  list.innerHTML=[...S.rounds].reverse().map(r=>`
+    <div class="round-item">
+      <div class="round-title-bar" onclick="toggleRound(${r.id})">
+        <div><div class="round-title-label">${r.label}</div><div class="round-time">${fmt(r.time)} · ${r.teams.length} teams · ${r.teams.reduce((s,t)=>s+t.players.length,0)} players</div></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="btn btn-red btn-sm" onclick="event.stopPropagation();deleteRound(${r.id})">✕ Delete</button>
+          <em class="chevron" id="chev-${r.id}">▾</em>
+        </div>
+      </div>
+      <div class="round-body" id="rb-${r.id}">
+        <div class="round-mini-teams">
+          ${r.teams.map(t=>`<div class="rmt"><div class="rmt-name" style="color:${t.color}">${t.name}</div><div class="rmt-players">${t.players.map(p=>`${p.first} ${p.last} (${p.age}, ⭐${p.talent})`).join(' · ')}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+}
+function toggleRound(id){ const b=document.getElementById('rb-'+id),c=document.getElementById('chev-'+id); c.classList.toggle('open',b.classList.toggle('open')); }
+function deleteRound(id){ S.rounds=S.rounds.filter(r=>r.id!==id); save(); renderHistory(); }
+function clearHistory(){ if(!confirm('Clear all saved rounds?')) return; S.rounds=[]; save(); renderHistory(); }
+
+/* ══ ADMIN ══ */
+function renderAdminPage(){
+  // Pre-fill fields from effective values (baked or localStorage)
+  document.getElementById('a-sb-url').value    = effUrl()||'';
+  document.getElementById('a-sb-key').value    = effKey()||'';
+  document.getElementById('a-name').value      = effName()||'';
+  document.getElementById('a-open').value      = effOpen() ? effOpen().slice(0,16):'';
+  document.getElementById('a-close').value     = effClose()? effClose().slice(0,16):'';
+  document.getElementById('a-event-date').value= effDate()||'';
+  document.getElementById('a-live-url').value  = S.liveUrl||'';
+  msg('admin-msg',''); msg('conn-msg','');
+  document.getElementById('sb-ok-banner').style.display   = dbOk?'':'none';
+  document.getElementById('sb-setup-steps').style.display = dbOk?'none':'';
+  renderPList('admin-roster',players,true);
+  if(S.liveUrl) updateSharePreview();
+}
+
+function saveCreds(){
+  S.sbUrl=document.getElementById('a-sb-url').value.trim().replace(/\/$/,'');
+  S.sbKey=document.getElementById('a-sb-key').value.trim();
+  save();
+}
+
+async function testConnection(){
+  saveCreds();
+  if(!S.sbUrl||!S.sbKey) return msg('conn-msg','⚠ Enter your URL and key first.','err');
+  document.getElementById('conn-msg').innerHTML='<div class="spinner"></div>';
+  try{
+    // Temporarily use S values for test since BAKED may not be set yet
+    const r = await fetch(S.sbUrl+'/rest/v1/players?limit=1',{headers:{'apikey':S.sbKey,'Authorization':'Bearer '+S.sbKey}});
+    if(!r.ok) throw new Error(await r.text());
+    setDbPill('connected');
+    document.getElementById('sb-ok-banner').style.display='';
+    document.getElementById('sb-setup-steps').style.display='none';
+    msg('conn-msg','✅ Connected! Now fill in the event settings below and click Save & Download File.','ok');
+  } catch(e){
+    setDbPill('error');
+    msg('conn-msg','❌ Failed: '+e.message,'err');
+  }
+}
+
+function saveAdmin(){
+  const name  = document.getElementById('a-name').value.trim();
+  const open  = document.getElementById('a-open').value;
+  const close = document.getElementById('a-close').value;
+  const edate = document.getElementById('a-event-date').value;
+  const url   = document.getElementById('a-sb-url').value.trim().replace(/\/$/,'');
+  const key   = document.getElementById('a-sb-key').value.trim();
+  if(!url||!key)   return msg('admin-msg','⚠ Please enter your Supabase URL and key first.','err');
+  if(!name)        return msg('admin-msg','⚠ Please enter an event name.','err');
+  if(!open||!close)return msg('admin-msg','⚠ Please set both registration dates.','err');
+  if(new Date(open)>=new Date(close)) return msg('admin-msg','⚠ Open date must be before close date.','err');
+
+  // Save to localStorage for admin's own session
+  S.sbUrl=url; S.sbKey=key; S.eventName=name;
+  S.regOpen=new Date(open).toISOString(); S.regClose=new Date(close).toISOString();
+  S.eventDate=edate; S.liveUrl=document.getElementById('a-live-url').value.trim();
+  // Ensure a stable eventId exists
+  if(!S.eventId||S.eventId==='evt_undefined') S.eventId='evt_'+Math.random().toString(36).slice(2,9);
+  save();
+
+  // Bake credentials into the HTML file and trigger download
+  bakeAndDownload(url, key, S.eventId, name, S.regOpen, S.regClose, edate);
+}
+
+async function bakeAndDownload(sbUrl, sbKey, eventId, eventName, regOpen, regClose, eventDate){
+  // Fetch the current page's HTML source
+  try{
+    const resp = await fetch(window.location.href);
+    let html = await resp.text();
+
+    // Replace placeholder tokens with real values
+    const replacements = {
+      '%%SB_URL%%':     sbUrl,
+      '%%SB_KEY%%':     sbKey,
+      '%%EVENT_ID%%':   eventId,
+      '%%EVENT_NAME%%': eventName,
+      '%%REG_OPEN%%':   regOpen,
+      '%%REG_CLOSE%%':  regClose,
+      '%%EVENT_DATE%%': eventDate||'',
+    };
+
+    for(const [token, val] of Object.entries(replacements)){
+      // Replace all occurrences of the token inside the BAKED object string
+      html = html.replaceAll("'"+token+"'", "'"+val+"'");
+    }
+
+    // Trigger download
+    const blob = new Blob([html],{type:'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'index.html';
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    msg('admin-msg','✅ Settings saved! <strong>index.html downloaded</strong> — upload it to GitHub to apply changes for all users.','ok');
+  } catch(e){
+    // Fallback: if fetch of own page fails (e.g. file:// protocol), show instructions
+    msg('admin-msg','✅ Settings saved locally. To apply to all users, re-download the app file and re-upload it to GitHub with your credentials filled in.','ok');
+  }
+}
+
+async function removePlayer(id){
+  try{ await sbDel(`players?id=eq.${id}`); players=players.filter(p=>p.id!==id); renderPlayersList(); updateStats(); }
+  catch(e){ alert('Could not remove player: '+e.message); }
+}
+async function clearRoster(){
+  if(!confirm('Delete ALL players from the database for this event?')) return;
+  try{ await sbDel(`players?event_id=eq.${encodeURIComponent(effId())}`); players=[]; renderPlayersList(); updateStats(); }
+  catch(e){ alert('Failed: '+e.message); }
+}
+function clearRoundsAdmin(){ if(!confirm('Delete all saved rounds?')) return; S.rounds=[]; save(); }
+
+/* ══ SHARE ══ */
+function updateSharePreview(){
+  const url=document.getElementById('a-live-url').value.trim();
+  const preview=document.getElementById('share-preview');
+  if(!url||!url.startsWith('http')){ preview.style.display='none'; return; }
+  document.getElementById('share-msg-text').textContent =
+    `🥏 ${effName()}\n\nHey everyone! Registration is now open for our upcoming game. Sign up to be drafted into a balanced team!\n\n📅 Registration closes: ${effClose()?fmt(effClose()):'TBD'}\n\n👉 Register here: ${url}\n\nJust click the link, fill in your name, age, and skill level — takes 30 seconds. See you on the field! 🙌`;
+  preview.style.display='block';
+}
+function copyShareMsg(){
+  const url=document.getElementById('a-live-url').value.trim();
+  if(!url||!url.startsWith('http')) return msg('share-copy-msg','⚠ Enter your live URL first.','err');
+  navigator.clipboard.writeText(document.getElementById('share-msg-text').textContent)
+    .then(()=>msg('share-copy-msg','✅ Copied! Paste it in your group chat.','ok'))
+    .catch(()=>msg('share-copy-msg','⚠ Could not copy automatically — select and copy the message manually.','err'));
+}
+
+/* ══ INIT ══ */
+loadPlayers(false);
+</script>
+</body>
+</html>
